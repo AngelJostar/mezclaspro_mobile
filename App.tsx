@@ -1,3 +1,4 @@
+import { BackButton } from './src/BackButton';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
@@ -8,7 +9,9 @@ import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { acceptRoute, assignedRoutes, availableRoutes, confirmDelivery, Coordinates, hospitalDashboard, HospitalDashboard, login, markAllMobileNotificationsRead, mobileMe, MobileNotification, mobileNotifications, MobileRoute, MobileStop, MobileUser, releaseRoute, routeCatalog as loadRouteCatalog, RouteCatalogItem, routeHistory as loadRouteHistory, sendLocation, startRoute } from './src/mobileApi';
 
-type Screen = 'login' | 'routes' | 'catalog' | 'routeCatalog' | 'scanner' | 'history' | 'route' | 'delivery' | 'profile' | 'hospital';
+import { SalesScreen } from './src/SalesScreen';
+import { HospitalScreen } from './src/HospitalScreen';
+type Screen = 'login' | 'routes' | 'catalog' | 'routeCatalog' | 'scanner' | 'history' | 'route' | 'delivery' | 'profile' | 'hospital' | 'sales';
 const TOKEN_KEY = 'prodifem.mobile.token';
 const DEMO_USERS = [
   { label: 'Juan Aviles - Mensajero', username: 'Juan Aviles', password: 'demo' },
@@ -111,6 +114,13 @@ function MobileApp() {
       const user = await mobileMe(sessionToken);
       setToken(sessionToken);
       setMobileUser(user);
+
+      if (user.module === 'sales') {
+        setRoutes([]);
+        setHospitalData(null);
+        setScreen('sales');
+        return;
+      }
 
       if (user.module === 'hospital') {
         const dashboard = await hospitalDashboard(sessionToken);
@@ -399,7 +409,7 @@ function MobileApp() {
   };
 
   const Header = ({ title, back, subtitle = 'Prodifem · Mensajería' }: { title: string; back?: Screen; subtitle?: string }) => <View style={styles.header}>
-    {back ? <Pressable style={styles.back} onPress={() => setScreen(back)}><Text style={styles.backText}>‹</Text></Pressable> : <View style={styles.brand}><Text style={styles.brandText}>P</Text></View>}
+    {back ? <BackButton onPress={() => setScreen(back)} /> : <View style={styles.brand}><Text style={styles.brandText}>P</Text></View>}
     <View><Text style={styles.headerTitle}>{title}</Text><Text style={styles.headerSubtitle}>{subtitle}</Text></View>
   </View>;
 
@@ -529,7 +539,7 @@ function MobileApp() {
           </View>
         </View>
         <View style={styles.scannerTitleRow}>
-          <Pressable accessibilityLabel="Volver" onPress={() => setScreen('routes')} style={styles.scannerBack}><Text style={styles.scannerBackText}>‹</Text></Pressable>
+          <BackButton onPress={() => setScreen('routes')} />
           <Text style={styles.scannerTitle}>Rutas programadas de hoy</Text><View style={styles.scannerBack} />
         </View>
       </View>
@@ -581,7 +591,7 @@ function MobileApp() {
           </View>
         </View>
         <View style={styles.scannerTitleRow}>
-          <Pressable accessibilityLabel="Volver" onPress={() => setScreen('routes')} style={styles.scannerBack}><Text style={styles.scannerBackText}>‹</Text></Pressable>
+          <BackButton onPress={() => setScreen('routes')} />
           <Text style={styles.scannerTitle}>Catálogo de rutas</Text><View style={styles.scannerBack} />
         </View>
       </View>
@@ -627,7 +637,7 @@ function MobileApp() {
           </View>
         </View>
         <View style={styles.scannerTitleRow}>
-          <Pressable accessibilityLabel="Volver" onPress={() => setScreen('routes')} style={styles.scannerBack}><Text style={styles.scannerBackText}>‹</Text></Pressable>
+          <BackButton onPress={() => setScreen('routes')} />
           <Text style={styles.scannerTitle}>Escanear QR de ruta</Text><View style={styles.scannerBack} />
         </View>
       </View>
@@ -682,7 +692,7 @@ function MobileApp() {
           <Pressable accessibilityLabel="Abrir menú" style={styles.courierToolbarButton}><Text style={styles.courierToolbarIcon}>☰</Text></Pressable>
           <View style={styles.courierToolbarActions}><Pressable accessibilityLabel="Notificaciones" style={styles.courierToolbarButton}><Text style={styles.courierToolbarIcon}>♟</Text><View style={styles.notificationDot} /></Pressable><Pressable accessibilityLabel="Perfil" onPress={() => setScreen('profile')} style={styles.courierToolbarButton}><Text style={styles.courierToolbarIcon}>♙</Text></Pressable></View>
         </View>
-        <View style={styles.scannerTitleRow}><Pressable accessibilityLabel="Volver" onPress={() => setScreen('routes')} style={styles.scannerBack}><Text style={styles.scannerBackText}>‹</Text></Pressable><Text style={styles.scannerTitle}>Resumen de ruta</Text><View style={styles.scannerBack} /></View>
+        <View style={styles.scannerTitleRow}><BackButton onPress={() => setScreen('routes')} /><Text style={styles.scannerTitle}>Resumen de ruta</Text><View style={styles.scannerBack} /></View>
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => token && loadApp(token)} />}>
@@ -706,17 +716,9 @@ function MobileApp() {
     </SafeAreaView>;
   }
 
-  if (screen === 'hospital') {
-    const hospitalName = hospitalData?.hospital.name ?? mobileUser?.hospital?.name ?? 'Hospital';
-    const pending = hospitalData?.requests.pending_total ?? 0;
-    return <SafeAreaView style={styles.safe}><StatusBar style="light" /><Header title="Inicio" subtitle="Prodifem · Hospital" /><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => token && loadApp(token)} />}>
-      <View style={styles.hospitalHeading}><Text style={styles.hospitalName}>{hospitalName}</Text><Text style={styles.greeting}>Portal hospitalario</Text></View>
-      <Text style={styles.hospitalGreeting}>Hola, {mobileUser?.name || 'Coordinación'}</Text><Text style={styles.hospitalQuestion}>¿Qué deseas consultar hoy?</Text>
-      <View style={styles.hospitalAction}><View style={styles.actionIcon}><Text style={styles.actionIconText}>+</Text></View><View style={styles.actionCopy}><Text style={styles.actionTitle}>Nueva solicitud</Text><Text style={styles.actionText}>La captura clínica se habilitará en el siguiente avance del módulo.</Text></View></View>
-      <View style={styles.hospitalAction}><View style={styles.actionIcon}><Text style={styles.actionIconText}>▤</Text></View><View style={styles.actionCopy}><Text style={styles.actionTitle}>Solicitudes pendientes</Text><Text style={styles.actionText}>Oncología y antibióticos: {hospitalData?.requests.oncology_pending ?? 0}</Text><Text style={styles.actionText}>Nutrición: {hospitalData?.requests.nutrition_pending ?? 0}</Text></View><View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{pending}</Text></View></View>
-      <View style={styles.hospitalAction}><View style={styles.actionIcon}><Text style={styles.actionIconText}>□</Text></View><View style={styles.actionCopy}><Text style={styles.actionTitle}>Seguimiento a pedidos</Text><Text style={styles.actionText}>Se conectará al seguimiento de distribución en el próximo avance.</Text></View></View>
-    </ScrollView><BottomNav active="hospital" home="hospital" onNavigate={setScreen} /></SafeAreaView>;
-  }
+  if (screen === 'sales' && token) return <SalesScreen token={token} name={mobileUser?.name ?? ''} onLogout={async () => { await removeStoredToken(); setToken(null); setMobileUser(null); setScreen('login'); }} />;
+
+  if (screen === 'hospital' && token && mobileUser) return <HospitalScreen token={token} user={mobileUser} onLogout={signOut} />;
 
   if (screen === 'profile') {
     const completedRoutes = historyRoutes.filter((item) => item.status === 'completed').length;
@@ -1149,3 +1151,4 @@ const styles = StyleSheet.create({
   warningTitle: { color: '#8A5A00', fontWeight: '800', marginBottom: 5 },
   warningText: { color: '#765B27', fontSize: 13, lineHeight: 19 },
 });
+

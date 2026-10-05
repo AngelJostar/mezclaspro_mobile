@@ -16,6 +16,14 @@
           "locationWhenInUsePermission": "Permite que Prodifem Rutas use tu ubicación durante la entrega."
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       "expo-secure-store",
       [
         "expo-camera",
@@ -24,10 +32,12 @@
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
-      ]
+      ],
+      "expo-font",
+      "expo-build-properties",
+      "expo-sharing"
     ],
     "android": {
-      "usesCleartextTraffic": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

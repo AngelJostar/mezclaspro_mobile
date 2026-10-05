@@ -1,4 +1,7 @@
-export const API_BASE_URL = 'http://10.0.2.2:8000/api/mobile';
+export const API_BASE_URL = 'http://10.0.2.2:8080/api/mobile';
+
+export type QuotationWorkflow = { id: number; folio: string; status: string; status_label: string; institution?: string; hospital?: string; seller?: string; central?: string; request_id?: number; category: string; can_authorize: boolean; can_prepare: boolean; events: { previous_status?: string; status: string; source: string; created_at: string }[] };
+export function quotationWorkflow(token: string, id: number): Promise<QuotationWorkflow> { return request(`/quotations/${id}/workflow`, {}, token); }
 
 type ApiError = { message?: string; errors?: Record<string, string[]> };
 
@@ -43,7 +46,7 @@ export type MobileUser = {
   id: number;
   name: string;
   username: string;
-  module: 'courier' | 'hospital';
+  module: 'courier' | 'hospital' | 'sales';
   profile: {
     position: string;
     email: string | null;
@@ -60,7 +63,9 @@ export type MobileNotification = {
   id: string;
   title: string;
   message: string;
-  kind: 'route_assigned' | 'reminder' | 'delivery_completed' | 'info';
+  kind: 'route_assigned' | 'reminder' | 'delivery_completed' | 'info' | 'quotation_updated';
+  quotation_id?: number;
+  status?: string;
   read_at: string | null;
   created_at: string | null;
   relative_time: string;
@@ -113,6 +118,28 @@ export async function login(username: string, password: string): Promise<MobileS
     body: JSON.stringify({ username, password, device_name: 'Prodifem Rutas Android' }),
   });
 }
+
+export function salesRequest<T>(path: string, token: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(`/sales${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) }, token);
+}
+
+export function hospitalRequest<T>(path: string, token: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(`/hospital${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) }, token);
+}
+
+export async function uploadHospitalRequest<T>(token: string, form: FormData): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(`${API_BASE_URL}/hospital/quotation-requests`, { method: 'POST', signal: controller.signal,
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, body: form });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.errors ? Object.values(data.errors).flat().join('\n') : data.message || 'No se pudo enviar la solicitud.');
+    return data;
+  } finally { clearTimeout(timer); }
+}
+
+export function mobileLogout(token: string): Promise<unknown> { return request('/auth/logout', { method: 'POST' }, token); }
 
 export async function mobileMe(token: string): Promise<MobileUser> {
   const data = await request<{ user: MobileUser }>('/me', {}, token);
